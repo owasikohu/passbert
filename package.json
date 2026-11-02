@@ -1,0 +1,17 @@
+{
+  "name": "passbert-browser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/browser.test.mjs",
+    "test:extension": "node --test tests/extension.test.mjs",
+    "lint:firefox": "web-ext lint --source-dir artifacts/firefox-extension"
+  },
+  "dependencies": {
+    "onnxruntime-web": "1.23.2"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "web-ext": "^10.8.0"
+  }
+}

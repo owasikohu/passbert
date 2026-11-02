@@ -1,0 +1,57 @@
+[
+  {
+    "html": "<form><h2>ログイン</h2><label for=\"u\">メール PRIVATE</label><input id=\"u\" value=\"PRIVATE\"><input type=\"password\" placeholder=\"password\"><button>Sign in</button></form>",
+    "expected": [
+      {
+        "context": "ログイン sign in",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "メール",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "password",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "html": "<form><label><textarea>password PRIVATE</textarea></label><input type=\"hidden\"><input aria-hidden=\"true\"><input placeholder=\"認証 コード\"></form>",
+    "expected": [
+      {
+        "context": "",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": ""
+          },
+          {
+            "type": "text",
+            "hint": "認証 コード",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "html": "<input name=\"username\" autocomplete=\"username\"><button>Next</button>",
+    "expected": [
+      {
+        "context": "next",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "username",
+            "autocomplete": "username"
+          }
+        ]
+      }
+    ]
+  }
+]
