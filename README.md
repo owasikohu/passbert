@@ -1,5 +1,7 @@
 # passbert
 
+ラベル候補の別モデル判定: [Qwen3.8-27Bによる盲検レビュー](docs/BLIND_REVIEW.md)。
+
 実フォームの収集・弱いラベル候補の作成: [コーパスガイド](docs/CORPUS.md)。
 
 自動診断・一括テスト・改良モデルの再学習手順: [自動化ガイド](docs/AUTOMATION.md)。Firefox拡張は「ラベルなしで自動診断・保存」に対応しています。

@@ -1,0 +1,22 @@
+{
+  "model": "Qwen/Qwen3.8-27B",
+  "quant_repo": "unsloth/Qwen3.8-27B-GGUF",
+  "quant_revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+  "quant_file": "Qwen3.8-27B-UD-Q6_K.gguf",
+  "quant_bytes": 21983677344,
+  "quant_sha256": "c9c206812fbe4ac7b76a729e25928b63f2ae89d37f69da7a71c20aec763cd436",
+  "llama_release": "b12208",
+  "assets": [
+    {
+      "name": "cudart-llama-b12208-bin-ubuntu-cuda-12.8-x64.tar.gz",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12208/cudart-llama-b12208-bin-ubuntu-cuda-12.8-x64.tar.gz",
+      "digest": "sha256:77fe809b3c4c1f35b43f4ce460b10280a9e6ae155f85fc2c82b1debbd0e51688"
+    },
+    {
+      "name": "llama-b12208-bin-ubuntu-cuda-12.8-x64.tar.gz",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12208/llama-b12208-bin-ubuntu-cuda-12.8-x64.tar.gz",
+      "digest": "sha256:be560d1ba7f73e056502d01b6a2701d8d1bb9ca7369c3140a0270f3f07c94436"
+    }
+  ],
+  "base_revision_reference": "37561816e66b5b9153b1b64c10968c18c1e6f4a0"
+}
