@@ -6,7 +6,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
-p=argparse.ArgumentParser();p.add_argument('--model',default='artifacts/kaggle-output/model');p.add_argument('--output',default='artifacts/firefox-extension');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--model',default='artifacts/kaggle-v2-output/model');p.add_argument('--output',default='artifacts/firefox-extension');args=p.parse_args()
 root=Path(__file__).resolve().parents[1];out=root/args.output;source=root/args.model
 required=['tokenizer.json','model.int8.onnx']
 for name in required:
@@ -20,7 +20,7 @@ shutil.copytree(root/'web',out/'web',dirs_exist_ok=True)
 (out/'evaluation.mjs').write_text((out/'evaluation.mjs').read_text().replace('../../web/policy.mjs','./web/policy.mjs'))
 (out/'model').mkdir(exist_ok=True);(out/'vendor').mkdir(exist_ok=True)
 for name in required:shutil.copy2(source/name,out/'model'/name)
-metadata={'name':'passbert-tinybert','artifact_source':str(Path(args.model)),'sha256':{name:hashlib.sha256((source/name).read_bytes()).hexdigest() for name in required},'runtime':'onnxruntime-web@1.23.2','backend':'wasm','threads':1,'training_data':'synthetic-v1; real-world accuracy unverified'}
+metadata={'name':'passbert-tinybert','artifact_source':str(Path(args.model)),'sha256':{name:hashlib.sha256((source/name).read_bytes()).hexdigest() for name in required},'runtime':'onnxruntime-web@1.23.2','backend':'wasm','threads':1,'training_data':'synthetic-v2; real-world accuracy unverified'}
 (out/'model/metadata.json').write_text(json.dumps(metadata,indent=2))
 for name in ['ort.wasm.min.mjs','ort-wasm-simd-threaded.mjs','ort-wasm-simd-threaded.wasm']:
     shutil.copy2(ort/'dist'/name,out/'vendor'/name)
@@ -39,7 +39,7 @@ return {snapshot_key:key,hostname:location.hostname,forms,visibility:groups.map(
 '''
 (out/'capture.js').write_text('(()=>{\n'+policy+'\n'+extract+'\n'+capture+'\n})()\n')
 # Explicit allowlist avoids shipping stale files or arbitrary source/data in the XPI.
-files=[*(out/f.name for f in (root/'extension/firefox').iterdir() if f.is_file()),out/'capture.js',out/'LICENSE',*(out/'web'/f for f in ['infer.mjs','extract.mjs','policy.mjs']),*(out/'vendor'/f for f in ['ort.wasm.min.mjs','ort-wasm-simd-threaded.mjs','ort-wasm-simd-threaded.wasm','ONNX-RUNTIME-LICENSE','ONNX-RUNTIME-NOTICES']),*(out/'model'/f for f in [*required,'metadata.json'])]
+files=[*(out/f.name for f in (root/'extension/firefox').iterdir() if f.is_file()),out/'capture.js',out/'LICENSE',*(out/'web'/f for f in ['infer.mjs','extract.mjs','policy.mjs','decision.mjs']),*(out/'vendor'/f for f in ['ort.wasm.min.mjs','ort-wasm-simd-threaded.mjs','ort-wasm-simd-threaded.wasm','ONNX-RUNTIME-LICENSE','ONNX-RUNTIME-NOTICES']),*(out/'model'/f for f in [*required,'metadata.json'])]
 xpi=out.parent/'passbert-firefox-eval.xpi'
 with zipfile.ZipFile(xpi,'w',zipfile.ZIP_DEFLATED) as z:
     for file in sorted(files):z.write(file,file.relative_to(out))

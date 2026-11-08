@@ -11,6 +11,9 @@ browser.action.onClicked.addListener(async tab => {
   } catch (error) {
     snapshot = {id,error:'このページを読み取れません。通常のHTTPSページで実行してください。ブラウザ内蔵ページやアクセス制限のあるページは対象外です。'};
   }
+  const previous=await browser.storage.session.get(null);
+  const stale=Object.keys(previous).slice(0,Math.max(0,Object.keys(previous).length-19));
+  if(stale.length)await browser.storage.session.remove(stale);
   await browser.storage.session.set({[id]:snapshot});
   await browser.tabs.create({url:browser.runtime.getURL('review.html')+'?id='+encodeURIComponent(id)});
 });

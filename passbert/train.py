@@ -9,15 +9,16 @@ from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
 from transformers import BertConfig, BertForTokenClassification
 from passbert.data import FIELDS, FORMS, serialize, load, generate
 from passbert.metrics import score
+from passbert.windows import windows
+from passbert.synthetic import generate_v2
 
 LABELS = ['form:'+x for x in FORMS] + ['field:'+x for x in FIELDS]
 
 def encode(tok, row):
-    ids = tok.encode(serialize(row['form'])).ids
-    if len(ids) > 256:
-        raise ValueError('Form exceeds 256 tokens; windowing required, never silently truncate fields')
-    pos = [i for i,t in enumerate(ids) if t == tok.token_to_id('[FLD]')]
-    assert len(pos) == len(row['field_labels'])
+    chunks=windows(tok,row['form'])
+    if len(chunks)!=1:raise ValueError('Training rows must be split into whole-field windows')
+    ids,pos,_=chunks[0]
+    assert len(pos)==len(row['field_labels'])
     labels = [-100]*len(ids); labels[0] = FORMS.index(row['form_label'])
     for p, label in zip(pos,row['field_labels']): labels[p] = len(FORMS)+FIELDS.index(label)
     return ids, labels
@@ -58,7 +59,7 @@ def evaluate(rows, predict):
 def run(args):
     torch.set_num_threads(2); torch.manual_seed(42); random.seed(42); np.random.seed(42)
     out=Path(args.output); out.mkdir(parents=True,exist_ok=True)
-    if args.generate: generate(args.data)
+    if args.generate: (generate_v2 if args.generator=='v2' else generate)(args.data)
     train=load(Path(args.data)/'train.jsonl'); val=load(Path(args.data)/'val.jsonl'); test=load(Path(args.data)/'test.jsonl')
     for key in ['site_id','signature','template_family']:
         sets=[{r[key] for r in rows} for rows in [train,val,test]]
@@ -71,12 +72,19 @@ def run(args):
     model=BertForTokenClassification(config); device='cuda' if torch.cuda.is_available() else 'cpu'; model.to(device)
     params=sum(p.numel() for p in model.parameters()); assert 1_000_000<=params<=2_000_000
     optim=torch.optim.AdamW(model.parameters(),lr=5e-4); best=-1; history=[]
+    original_train=train
+    train=[]
+    for row in original_train:
+        for _,_,indices in windows(tok,row['form']):
+            chunk=dict(row);chunk['form']={'context':row['form']['context'],'fields':[row['form']['fields'][i] for i in indices]};chunk['field_labels']=[row['field_labels'][i] for i in indices];train.append(chunk)
     def predict(form):
-        row={'form':form,'form_label':'other','field_labels':['other']*len(form['fields'])}
-        x=batch(tok,[row],device); x.pop('labels')
-        with torch.no_grad(): logits=model(**x).logits[0].cpu()
-        positions=(x['input_ids'][0].cpu()==tok.token_to_id('[FLD]')).nonzero().flatten().tolist()
-        return FORMS[logits[0,:len(FORMS)].argmax()], [FIELDS[logits[p,len(FORMS):].argmax()] for p in positions]
+        chunks=windows(tok,form);scores=[];fields=[None]*len(form['fields'])
+        with torch.no_grad():
+            for ids,pos,indices in chunks:
+                x=torch.tensor([ids],device=device);logits=model(input_ids=x,attention_mask=torch.ones_like(x)).logits[0].cpu()
+                scores.append(logits[0,:len(FORMS)])
+                for p,i in zip(pos,indices):fields[i]=FIELDS[int(logits[p,len(FORMS):].argmax())]
+        return FORMS[int(torch.stack(scores).mean(0).argmax())],fields
     for epoch in range(args.epochs):
         model.train(); random.shuffle(train); losses=[]
         for start in range(0,len(train),32):
@@ -113,4 +121,4 @@ def run(args):
     print(json.dumps({k:report[k] for k in ['device','parameters','vocabulary_used']},indent=2))
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(); p.add_argument('--data',default='artifacts/data'); p.add_argument('--output',default='artifacts/smoke'); p.add_argument('--epochs',type=int,default=8); p.add_argument('--generate',action='store_true'); run(p.parse_args())
+    p=argparse.ArgumentParser(); p.add_argument('--data',default='artifacts/data'); p.add_argument('--output',default='artifacts/smoke'); p.add_argument('--epochs',type=int,default=8); p.add_argument('--generate',action='store_true'); p.add_argument('--generator',choices=['v1','v2'],default='v2'); run(p.parse_args())

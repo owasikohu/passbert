@@ -14,7 +14,7 @@ test('evaluation labels align, unreviewable and failed predictions are excluded'
  const skipped=makeRecord(snapshot,[{form_label:'unreviewable',field_labels:['unreviewable']}],[null],'ja',{});
  assert.deepEqual(metrics([skipped]),{form:{correct:0,total:0},field:{correct:0,total:0}});
 });
-test('packaged capture excludes values and URLs, retains DOM mapping only in isolated world',()=>{
+test('packaged capture excludes values and URLs, retains DOM mapping only in isolated world',{skip:!fs.existsSync('artifacts/firefox-extension/capture.js')},()=>{
  const dom=new JSDOM('<form><h2>ログイン</h2><label for="u">メール</label><input id="u" value="PRIVATE"><input type="password" value="SECRET"><textarea>PRIVATE</textarea><input type="hidden" value="SECRET"></form>',{url:'https://test.example/private?token=SECRET',runScripts:'outside-only'});
  const {window}=dom;
  Object.defineProperty(window.document,'cookie',{get(){throw Error('Cookie must not be read');}});

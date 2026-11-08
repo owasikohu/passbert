@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PassBERT フォーム評価",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "日英フォームのローカル分類・正解ラベル付け・評価JSONL保存。入力値は収集しません。",
   "permissions": ["activeTab", "scripting", "storage", "downloads"],
   "action": {"default_title": "このページのフォームを評価"},

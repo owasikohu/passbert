@@ -4,7 +4,7 @@ import json
 import random
 import re
 from pathlib import Path
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 
 FIELDS = ['username', 'email', 'current-password', 'new-password', 'one-time-code', 'search', 'other']
 FORMS = ['login', 'signup', 'password-recovery', 'otp', 'search', 'other']
@@ -17,32 +17,63 @@ def safe(text):
 
 def extract(html):
     soup = BeautifulSoup(html[:1_000_000], 'html5lib')
+    blocked = {'script','style','template','noscript','input','textarea','select','option'}
     for node in soup(['script','style','template','noscript']):
         node.decompose()
-    output = []
-    groups = list(soup.find_all('form'))
-    # Explicit fallback for form-less pages. Complex SPA grouping remains a coverage limitation.
-    if not groups:
-        groups = [soup.body]
-    for group in groups[:32]:
-        fields = []
-        for el in group.find_all(['input','textarea','select'])[:64]:
-            if el.get('type','text').lower() in ['hidden','submit','button','checkbox','radio','file','image','reset'] or el.has_attr('hidden') or el.get('aria-hidden') == 'true':
-                continue
-            label = soup.find('label', attrs={'for': el.get('id')}) if el.get('id') else None
-            if label is None:
-                label = el.find_parent('label')
-            # Never use label.text: nested textarea content may be user data.
-            label_text = ' '.join(str(t) for t in label.find_all(string=True) if t.parent.name not in ['textarea','select','option','input']) if label else ''
-            kind = el.get('type','text').lower()
-            if kind not in ['text','email','password','tel','number','search','url']:
-                kind = 'text'
-            fields.append({'type': kind, 'hint': safe(' '.join([el.get('name',''), el.get('id',''), el.get('placeholder',''), el.get('aria-label',''), label_text])), 'autocomplete': ' '.join(t for t in el.get('autocomplete','').split() if t in FIELDS)})
-        if fields:
-            headings = group.find_all(['h1','h2','h3'])
-            buttons = group.find_all('button')
-            context_text = ' '.join(str(t) for n in headings + buttons for t in n.find_all(string=True) if not any(p.name in ['input','textarea','select','option'] for p in t.parents))
-            output.append({'context': safe(context_text), 'fields': fields})
+    def text(node):
+        if node is None: return ''
+        return ' '.join(str(t) for t in node.find_all(string=True)
+                        if not isinstance(t,Comment) and not any(p.name in blocked or p.get('contenteditable','false').lower() != 'false' for p in t.parents))
+    def eligible(el):
+        if el.get('type','text').lower() in ['hidden','submit','button','checkbox','radio','file','image','reset']: return False
+        for node in [el,*el.parents]:
+            if node.has_attr('hidden') or node.get('aria-hidden','').lower() == 'true': return False
+            style = re.sub(r'\s+', '', node.get('style','').lower())
+            if re.search(r'(?:^|;)(?:display:none|visibility:hidden)(?:;|$|!)',style): return False
+        return True
+    controls = [el for el in soup.find_all(['input','textarea','select']) if eligible(el)]
+    groups = [(f,[]) for f in soup.find_all('form')]
+    def group_for(el):
+        if el.has_attr('form'):
+            owner=soup.find('form',id=el['form'])
+        else: owner=el.find_parent('form')
+        if owner is not None: return owner
+        for parent in el.parents:
+            if parent.name in ['body','html','[document]']: break
+            if not parent.find('form') and parent.find(['button','input'], attrs={'type':'submit'}): return parent
+            if not parent.find('form') and parent.find('button'): return parent
+        return soup.body
+    for el in controls:
+        owner=group_for(el)
+        if owner is None: continue
+        entry=next((pair for pair in groups if pair[0] is owner),None)
+        if entry is None: entry=(owner,[]);groups.append(entry)
+        if len(entry[1])<64: entry[1].append(el)
+    output=[]
+    for group,elements in groups:
+        if not elements: continue
+        fields=[]
+        for el in elements:
+            label=soup.find('label',attrs={'for':el.get('id')}) if el.get('id') else None
+            if label is None: label=el.find_parent('label')
+            references=[soup.find(id=x) for x in el.get('aria-labelledby','').split()[:8]]
+            kind=el.get('type','text').lower()
+            if kind not in ['text','email','password','tel','number','search','url']: kind='text'
+            fields.append({'type':kind,'hint':safe(' '.join([el.get('name',''),el.get('id',''),el.get('placeholder',''),el.get('aria-label',''),text(label),*(text(n) for n in references)])),
+                           'autocomplete':' '.join(t for t in el.get('autocomplete','').lower().split() if t in FIELDS)})
+        headings=group.find_all(['h1','h2','h3'])
+        if not headings:
+            cursor=group
+            for _ in range(3):
+                for sib in cursor.previous_siblings:
+                    if not getattr(sib,'name',None): continue
+                    if sib.name=='form' or sib.find('form'): break
+                    candidates=([sib] if sib.name in ['h1','h2','h3'] else sib.find_all(['h1','h2','h3']))
+                    if candidates: headings=[candidates[-1]];break
+                if headings or cursor.parent is None or cursor.parent.name in ['body','html','[document]']: break
+                cursor=cursor.parent
+        output.append({'context':safe(' '.join(text(n) for n in headings+group.find_all('button'))),'fields':fields})
+        if len(output)>=32: break
     return output
 
 def serialize(form):
@@ -93,4 +124,7 @@ def generate(root, sites=240, seed=42):
     return rows
 
 def load(path):
-    return [json.loads(line) for line in Path(path).read_text().splitlines() if line]
+    rows=[json.loads(line) for line in Path(path).read_text().splitlines() if line]
+    if any(row.get('evaluation_only') for row in rows):
+        raise ValueError('Evaluation-only data must never enter training/tokenizer datasets')
+    return rows

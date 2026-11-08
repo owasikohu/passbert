@@ -21,12 +21,30 @@ export async function load(ort, base) {
     }return ids;
   };
   const session=await ort.InferenceSession.create(base+'/model.int8.onnx',{executionProviders:['wasm']});
-  return {encode,async predict(form){
-    const ids=encode(serialize(form));if(ids.length>256)throw Error('Form exceeds 256 tokens');
-    const start=performance.now();
-    const result=await session.run({input_ids:new ort.Tensor('int64',BigInt64Array.from(ids,BigInt),[1,ids.length]),attention_mask:new ort.Tensor('int64',BigInt64Array.from(ids,()=>1n),[1,ids.length])});
-    const logits=result.logits.data;const count=formLabels.length+fieldLabels.length;
-    const argmax=(pos,offset,size)=>{let best=0;for(let j=1;j<size;j++)if(logits[pos*count+offset+j]>logits[pos*count+offset+best])best=j;return best;};
-    return {form:formLabels[argmax(0,0,formLabels.length)],fields:ids.flatMap((id,i)=>id===vocab['[FLD]']?[fieldLabels[argmax(i,formLabels.length,fieldLabels.length)]]:[]),model_ms:performance.now()-start};
+  function windows(form){
+    const context=[vocab['[CLS]'],...encode(form.context).slice(0,64)];
+    const chunks=[];let ids=[...context],positions=[],indices=[];
+    form.fields.forEach((field,index)=>{
+      const tokens=encode('[FLD] '+[field.type,field.hint,field.autocomplete].join(' '));
+      if(tokens.length>256-context.length)throw Error('One field exceeds the whole-field token budget');
+      if(ids.length+tokens.length>256){chunks.push({ids,positions,indices});ids=[...context];positions=[];indices=[];}
+      positions.push(ids.length);indices.push(index);ids.push(...tokens);
+    });
+    if(indices.length)chunks.push({ids,positions,indices});
+    if(!chunks.length)throw Error('Cannot classify a form without fields');
+    return chunks;
+  }
+  return {encode,windows,async predict(form){
+    const chunks=windows(form);const start=performance.now();
+    const totals=new Float64Array(formLabels.length);const fields=new Array(form.fields.length);
+    const count=formLabels.length+fieldLabels.length;
+    const argmax=arr=>{let best=0;for(let j=1;j<arr.length;j++)if(arr[j]>arr[best])best=j;return best;};
+    for(const {ids,positions,indices} of chunks){
+      const result=await session.run({input_ids:new ort.Tensor('int64',BigInt64Array.from(ids,BigInt),[1,ids.length]),attention_mask:new ort.Tensor('int64',BigInt64Array.from(ids,()=>1n),[1,ids.length])});
+      const logits=result.logits.data;
+      for(let j=0;j<formLabels.length;j++)totals[j]+=logits[j];
+      positions.forEach((p,j)=>{fields[indices[j]]=fieldLabels[argmax(logits.slice(p*count+formLabels.length,(p+1)*count))];});
+    }
+    return {form:formLabels[argmax(totals)],fields,windows:chunks.length,model_ms:performance.now()-start};
   }};
 }

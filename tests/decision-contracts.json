@@ -1,0 +1,8 @@
+[
+ {"field":{"type":"text","hint":"username","autocomplete":""},"purpose":"login","raw":"current-password","expected":"username","reason":"identifier-hint"},
+ {"field":{"type":"password","hint":"","autocomplete":""},"purpose":"signup","raw":"current-password","expected":"new-password","reason":"password-type-and-purpose"},
+ {"field":{"type":"text","hint":"","autocomplete":"one-time-code"},"purpose":"otp","raw":"other","expected":"one-time-code","reason":"autocomplete"},
+ {"field":{"type":"email","hint":"","autocomplete":"off"},"purpose":"login","raw":"username","expected":"email","reason":"email-type"},
+ {"field":{"type":"text","hint":"","autocomplete":"off"},"purpose":"login","raw":"other","expected":"other","reason":null},
+ {"field":{"type":"password","hint":"","autocomplete":"new-password"},"purpose":"login","raw":"current-password","expected":"new-password","reason":"autocomplete"}
+]

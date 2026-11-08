@@ -1,0 +1,412 @@
+[
+  {
+    "name": "sibling-heading",
+    "html": "<main><h1>Sign in</h1><form><label for='u'>Username</label><input id='u'><label for='p'>Password</label><input id='p' type='password'><button>Continue</button></form></main>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "username",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "sign in continue",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "username",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "password",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ja-sibling-heading",
+    "html": "<section><h2>ログイン</h2><form><label>メール<input type='email'></label><label>パスワード<input type='password'></label><button>次へ</button></form></section>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "email",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "ログイン 次へ",
+        "fields": [
+          {
+            "type": "email",
+            "hint": "メール",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "パスワード",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "external-owner",
+    "html": "<form id='auth'><h2>Login</h2></form><input form='auth' aria-label='Username'><input form='auth' type='password' aria-label='Password'>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "username",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "login",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "username",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "password",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "aria-references",
+    "html": "<form><h2>Sign in</h2><span id='a'>Email</span><span id='b'>Password</span><input aria-labelledby='a' type='email'><input aria-labelledby='b' type='password'></form>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "email",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "sign in",
+        "fields": [
+          {
+            "type": "email",
+            "hint": "email",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "password",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "orphan-beside-form",
+    "html": "<form><h2>Search</h2><input type='search' placeholder='Search'></form><section><h2>Login</h2><input placeholder='Username'><input type='password'><button>Sign in</button></section>",
+    "labels": [
+      {
+        "form": "search",
+        "fields": [
+          "search"
+        ]
+      },
+      {
+        "form": "login",
+        "fields": [
+          "username",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "search",
+        "fields": [
+          {
+            "type": "search",
+            "hint": "search",
+            "autocomplete": ""
+          }
+        ]
+      },
+      {
+        "context": "login sign in",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "username",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "two-spa-cards",
+    "html": "<div><h2>Sign in</h2><input placeholder='Username'><input type='password'><button>Continue</button></div><div><h2>Search</h2><input type='search' placeholder='Search'><button>Search</button></div>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "username",
+          "current-password"
+        ]
+      },
+      {
+        "form": "search",
+        "fields": [
+          "search"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "sign in continue",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "username",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "",
+            "autocomplete": ""
+          }
+        ]
+      },
+      {
+        "context": "search search",
+        "fields": [
+          {
+            "type": "search",
+            "hint": "search",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "hidden-ancestor",
+    "html": "<form><h2>ログイン</h2><div hidden><input placeholder='email'></div><div aria-hidden='true'><input type='password'></div><div style='display: none'><input type='password'></div><input placeholder='Username'><input type='password'></form>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "username",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "ログイン",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "username",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "uppercase-autocomplete",
+    "html": "<form><h2>Sign in</h2><input autocomplete='USERNAME'><input type='password' autocomplete='CURRENT-PASSWORD'></form>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "username",
+          "current-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "sign in",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "username"
+          },
+          {
+            "type": "password",
+            "hint": "",
+            "autocomplete": "current-password"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "identifier-first",
+    "html": "<section><h2>Sign in</h2><form><input type='email' aria-label='Email'><button>Next</button></form></section>",
+    "labels": [
+      {
+        "form": "login",
+        "fields": [
+          "email"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "sign in next",
+        "fields": [
+          {
+            "type": "email",
+            "hint": "email",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ja-signup",
+    "html": "<section><h2>新規 登録</h2><form><input type='email' placeholder='メール'><input type='password' placeholder='新規 パスワード'><input type='password' placeholder='パスワード 確認'><button>登録</button></form></section>",
+    "labels": [
+      {
+        "form": "signup",
+        "fields": [
+          "email",
+          "new-password",
+          "new-password"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "新規 登録 登録",
+        "fields": [
+          {
+            "type": "email",
+            "hint": "メール",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "新規 パスワード",
+            "autocomplete": ""
+          },
+          {
+            "type": "password",
+            "hint": "パスワード 確認",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "recovery",
+    "html": "<section><h2>Reset password</h2><form><input type='email' aria-label='Email'><button>Continue</button></form></section>",
+    "labels": [
+      {
+        "form": "password-recovery",
+        "fields": [
+          "email"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "reset password continue",
+        "fields": [
+          {
+            "type": "email",
+            "hint": "email",
+            "autocomplete": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "split-otp",
+    "html": "<form><h2>認証 コード</h2><input autocomplete='one-time-code'><input autocomplete='one-time-code'><input autocomplete='one-time-code'><input autocomplete='one-time-code'><input autocomplete='one-time-code'><input autocomplete='one-time-code'><button>確認</button></form>",
+    "labels": [
+      {
+        "form": "otp",
+        "fields": [
+          "one-time-code",
+          "one-time-code",
+          "one-time-code",
+          "one-time-code",
+          "one-time-code",
+          "one-time-code"
+        ]
+      }
+    ],
+    "expected": [
+      {
+        "context": "認証 コード 確認",
+        "fields": [
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "one-time-code"
+          },
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "one-time-code"
+          },
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "one-time-code"
+          },
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "one-time-code"
+          },
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "one-time-code"
+          },
+          {
+            "type": "text",
+            "hint": "",
+            "autocomplete": "one-time-code"
+          }
+        ]
+      }
+    ]
+  }
+]
