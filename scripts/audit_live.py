@@ -26,11 +26,13 @@ try:
     try:
         try:driver.get(spec['url'])
         except Exception:pass
-        if driver.execute_script('return location.hostname')!=urlparse(spec['url']).hostname:
+        if driver.execute_script('return location.hostname') not in [urlparse(spec['url']).hostname,*spec.get('allowed_hosts',[])]:
             item['status']='unexpected_redirect';raise ValueError('Unexpected redirect')
         WebDriverWait(driver,12).until(lambda d:d.execute_script('return document.querySelectorAll("input:not([type=hidden])").length')>0)
         combined='const capture='+script.rstrip().rstrip(';')+';const mapping=(()=>{'+contract+'})();return {capture,mapping};'
         result=driver.execute_script(combined,spec['fields']);capture=result['capture'];mapping=result['mapping']
+        actual_language=driver.execute_script('return document.documentElement.lang').lower().split('-')[0]
+        item['language']=actual_language if actual_language in ['en','ja'] else 'other'
         item.update({'forms_extracted':len(capture['forms']),'fields_extracted':sum(len(f['fields']) for f in capture['forms']),'expected_fields':len(mapping),'contract_fields_found':sum(m is not None for m in mapping)})
         if any(m is None for m in mapping):item['status']='contract_mismatch'
         elif len({m['form'] for m in mapping})!=1:item['status']='grouping_mismatch'
@@ -41,7 +43,7 @@ try:
                 labels=['unreviewable']*len(form['fields'])
                 for m,s in zip(mapping,spec['fields']):labels[m['field']]=s['label']
                 start=time.perf_counter();pred=model.predict(form)
-                item.update({'status':'scored','site_id':'host-sha256:'+hashlib.sha256(urlparse(spec['url']).hostname.encode()).hexdigest(),'form':form,'form_label':spec['purpose'],'field_labels':labels,'prediction':pred,'latency_ms':(time.perf_counter()-start)*1000})
+                item.update({'status':'scored','site_id':'host-sha256:'+hashlib.sha256(capture['hostname'].encode()).hexdigest(),'form':form,'form_label':spec['purpose'],'field_labels':labels,'prediction':pred,'latency_ms':(time.perf_counter()-start)*1000})
     except Exception as e:
         item['error_type']=type(e).__name__
     report['sites'].append(item);print(spec['name'],item['status'],flush=True)

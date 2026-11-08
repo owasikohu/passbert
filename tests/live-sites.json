@@ -1,7 +1,88 @@
 [
- {"name":"github","url":"https://github.com/login","language":"en","purpose":"login","fields":[{"selector":"#login_field","label":"username"},{"selector":"#password","label":"current-password"}]},
- {"name":"gitlab","url":"https://gitlab.com/users/sign_in","language":"en","purpose":"login","fields":[{"selector":"#user_login","label":"username"},{"selector":"#user_password","label":"current-password"}]},
- {"name":"wikipedia-en","url":"https://en.wikipedia.org/w/index.php?title=Special:UserLogin","language":"en","purpose":"login","fields":[{"selector":"#wpName1","label":"username"},{"selector":"#wpPassword1","label":"current-password"}]},
- {"name":"wikipedia-ja","url":"https://ja.wikipedia.org/w/index.php?title=Special:UserLogin","language":"ja","purpose":"login","fields":[{"selector":"#wpName1","label":"username"},{"selector":"#wpPassword1","label":"current-password"}]},
- {"name":"hatena","url":"https://www.hatena.ne.jp/login","language":"ja","purpose":"login","fields":[{"selector":"input[name=name]","label":"username"},{"selector":"input[name=password]","label":"current-password"}]}
+  {
+    "name": "github",
+    "url": "https://github.com/login",
+    "language": "en",
+    "purpose": "login",
+    "fields": [
+      {
+        "selector": "#login_field",
+        "label": "username"
+      },
+      {
+        "selector": "#password",
+        "label": "current-password"
+      }
+    ]
+  },
+  {
+    "name": "gitlab",
+    "url": "https://gitlab.com/users/sign_in",
+    "language": "en",
+    "purpose": "login",
+    "fields": [
+      {
+        "selector": "#user_login",
+        "label": "username"
+      },
+      {
+        "selector": "#user_password",
+        "label": "current-password"
+      }
+    ]
+  },
+  {
+    "name": "wikipedia-en",
+    "url": "https://en.wikipedia.org/w/index.php?title=Special:UserLogin",
+    "language": "en",
+    "purpose": "login",
+    "fields": [
+      {
+        "selector": "#wpName1",
+        "label": "username"
+      },
+      {
+        "selector": "#wpPassword1",
+        "label": "current-password"
+      }
+    ],
+    "allowed_hosts": [
+      "auth.wikimedia.org"
+    ]
+  },
+  {
+    "name": "wikipedia-ja",
+    "url": "https://ja.wikipedia.org/w/index.php?title=Special:UserLogin",
+    "language": "ja",
+    "purpose": "login",
+    "fields": [
+      {
+        "selector": "#wpName1",
+        "label": "username"
+      },
+      {
+        "selector": "#wpPassword1",
+        "label": "current-password"
+      }
+    ],
+    "allowed_hosts": [
+      "auth.wikimedia.org"
+    ]
+  },
+  {
+    "name": "hatena",
+    "url": "https://www.hatena.ne.jp/login",
+    "language": "ja",
+    "purpose": "login",
+    "fields": [
+      {
+        "selector": "input[name=name]",
+        "label": "username"
+      },
+      {
+        "selector": "input[name=password]",
+        "label": "current-password"
+      }
+    ]
+  }
 ]
