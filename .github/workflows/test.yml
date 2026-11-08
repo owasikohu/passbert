@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - run: python -m pip install beautifulsoup4 html5lib tokenizers==0.20.3
+      - run: python -m pip install beautifulsoup4 html5lib tokenizers==0.20.3 warcio==1.8.2 tldextract==5.4.0 selectolax==1.0.2 lxml requests
       - run: npm ci
       - run: python -m unittest discover -s tests -v
       - run: python -m scripts.sync_policy --check

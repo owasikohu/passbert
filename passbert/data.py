@@ -15,52 +15,71 @@ PATTERN = re.compile('|'.join(map(re.escape, sorted(WORDS, key=len, reverse=True
 def safe(text):
     return ' '.join(m.group().lower() for m in PATTERN.finditer(str(text)[:2048]))[:192]
 
-def extract(html):
-    soup = BeautifulSoup(html[:1_000_000], 'html5lib')
+def extract(html, *, _parser="html5lib", _annotation_views=None):
+    if _annotation_views is not None:
+        from passbert.annotation import sanitize as annotation_safe, AUTOCOMPLETE as annotation_ac
+    soup = BeautifulSoup(html[:1_000_000], _parser)
     blocked = {'script','style','template','noscript','input','textarea','select','option'}
     for node in soup(['script','style','template','noscript']):
         node.decompose()
+    by_id={}
+    labels_by_for={}
+    forms_by_id={}
+    for node in soup.find_all(attrs={'id':True}):by_id.setdefault(node['id'],node)
+    for node in soup.find_all('label',attrs={'for':True}):labels_by_for.setdefault(node['for'],node)
+    for node in soup.find_all('form',attrs={'id':True}):forms_by_id.setdefault(node['id'],node)
+    visibility={}
+    def visible(node):
+        if node is None:return True
+        key=id(node)
+        if key in visibility:return visibility[key]
+        style=re.sub(r'\s+','',node.get('style','').lower())
+        result=not (node.has_attr('hidden') or node.get('aria-hidden','').lower()=='true' or re.search(r'(?:^|;)(?:display:none|visibility:hidden)(?:;|$|!)',style))
+        result=result and visible(node.parent);visibility[key]=result;return result
     def text(node):
         if node is None: return ''
         return ' '.join(str(t) for t in node.find_all(string=True)
                         if not isinstance(t,Comment) and not any(p.name in blocked or p.get('contenteditable','false').lower() != 'false' for p in t.parents))
     def eligible(el):
         if el.get('type','text').lower() in ['hidden','submit','button','checkbox','radio','file','image','reset']: return False
-        for node in [el,*el.parents]:
-            if node.has_attr('hidden') or node.get('aria-hidden','').lower() == 'true': return False
-            style = re.sub(r'\s+', '', node.get('style','').lower())
-            if re.search(r'(?:^|;)(?:display:none|visibility:hidden)(?:;|$|!)',style): return False
-        return True
+        return visible(el)
     controls = [el for el in soup.find_all(['input','textarea','select']) if eligible(el)]
     groups = [(f,[]) for f in soup.find_all('form')]
+    group_tests={}
     def group_for(el):
         if el.has_attr('form'):
-            owner=soup.find('form',id=el['form'])
+            owner=forms_by_id.get(el['form'])
         else: owner=el.find_parent('form')
         if owner is not None: return owner
         for parent in el.parents:
             if parent.name in ['body','html','[document]']: break
-            if not parent.find('form') and parent.find(['button','input'], attrs={'type':'submit'}): return parent
-            if not parent.find('form') and parent.find('button'): return parent
+            key=id(parent)
+            if key not in group_tests:
+                group_tests[key]=not parent.find('form') and bool(parent.find(['button','input'],attrs={'type':'submit'}) or parent.find('button'))
+            if group_tests[key]:return parent
         return soup.body
+    group_index={id(pair[0]):pair for pair in groups}
     for el in controls:
         owner=group_for(el)
         if owner is None: continue
-        entry=next((pair for pair in groups if pair[0] is owner),None)
-        if entry is None: entry=(owner,[]);groups.append(entry)
+        entry=group_index.get(id(owner))
+        if entry is None: entry=(owner,[]);groups.append(entry);group_index[id(owner)]=entry
         if len(entry[1])<64: entry[1].append(el)
     output=[]
     for group,elements in groups:
         if not elements: continue
-        fields=[]
+        fields=[];annotation_fields=[]
         for el in elements:
-            label=soup.find('label',attrs={'for':el.get('id')}) if el.get('id') else None
+            label=labels_by_for.get(el.get('id')) if el.get('id') else None
             if label is None: label=el.find_parent('label')
-            references=[soup.find(id=x) for x in el.get('aria-labelledby','').split()[:8]]
+            references=[by_id.get(x) for x in el.get('aria-labelledby','').split()[:8]]
             kind=el.get('type','text').lower()
             if kind not in ['text','email','password','tel','number','search','url']: kind='text'
-            fields.append({'type':kind,'hint':safe(' '.join([el.get('name',''),el.get('id',''),el.get('placeholder',''),el.get('aria-label',''),text(label),*(text(n) for n in references)])),
-                           'autocomplete':' '.join(t for t in el.get('autocomplete','').lower().split() if t in FIELDS)})
+            raw_hint=' '.join([el.get('name',''),el.get('id',''),el.get('placeholder',''),el.get('aria-label',''),text(label),*(text(n) for n in references)])
+            ac=el.get('autocomplete','').lower().split()
+            fields.append({'type':kind,'hint':safe(raw_hint),'autocomplete':' '.join(t for t in ac if t in FIELDS)})
+            if _annotation_views is not None:
+                annotation_fields.append({'type':kind,'hint':annotation_safe(raw_hint),'autocomplete':' '.join(t for t in ac if t in annotation_ac)})
         headings=group.find_all(['h1','h2','h3'])
         if not headings:
             cursor=group
@@ -72,7 +91,9 @@ def extract(html):
                     if candidates: headings=[candidates[-1]];break
                 if headings or cursor.parent is None or cursor.parent.name in ['body','html','[document]']: break
                 cursor=cursor.parent
-        output.append({'context':safe(' '.join(text(n) for n in headings+group.find_all('button'))),'fields':fields})
+        context=' '.join(text(n) for n in headings+group.find_all('button'))
+        output.append({'context':safe(context),'fields':fields})
+        if _annotation_views is not None:_annotation_views.append({'context':annotation_safe(context),'fields':annotation_fields})
         if len(output)>=32: break
     return output
 
@@ -127,4 +148,6 @@ def load(path):
     rows=[json.loads(line) for line in Path(path).read_text().splitlines() if line]
     if any(row.get('evaluation_only') for row in rows):
         raise ValueError('Evaluation-only data must never enter training/tokenizer datasets')
+    if any(row.get('label_status') in ['unlabeled','proposal'] for row in rows):
+        raise ValueError('Unlabeled forms and proposals require explicit audited label promotion')
     return rows

@@ -9,5 +9,6 @@ dependencies = ["torch>=2.2", "transformers==4.46.3", "tokenizers==0.20.3", "bea
 [project.optional-dependencies]
 kaggle = ["kaggle"]
 automation = ["selenium==4.52.0"]
+corpus = ["warcio==1.8.2", "tldextract==5.4.0", "selectolax==1.0.2", "lxml>=5", "requests>=2.32"]
 [tool.setuptools.packages.find]
 include = ["passbert*"]
