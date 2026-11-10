@@ -9,7 +9,7 @@ class BlindReviewTests(unittest.TestCase):
         self.request={'record_id':'a'*64,'form':self.form,'language':'en','teacher_predictions_visible':False,'prediction':'DO_NOT_UPLOAD'}
     def test_blind_payload_has_only_allowlisted_fields(self):
         payload=blind_payload(self.request,self.row)
-        self.assertEqual(set(payload),{'record_id','language','form','kind'})
+        self.assertEqual(set(payload),{'record_id','language','form','kind','annotation_policy'})
         self.assertNotIn('DO_NOT_UPLOAD',json.dumps(payload))
         self.assertNotIn('record_id',messages(payload)[1]['content'])
     def test_reserved_sites_and_unsafe_values_are_rejected(self):

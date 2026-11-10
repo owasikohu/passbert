@@ -7,9 +7,14 @@ import zipfile
 from pathlib import Path
 from passbert.review import blind_payload
 
-p=argparse.ArgumentParser();p.add_argument('--owner',default='owasikohu');p.add_argument('--slug',default='passbert-blind-review-qwen38-v1');p.add_argument('--teacher-config',default='configs/review-qwen38-q6.json');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--owner',default='owasikohu');p.add_argument('--slug',default='passbert-blind-review-qwen38-v1');p.add_argument('--teacher-config',default='configs/review-qwen38-q6.json');p.add_argument('--requests',default='artifacts/corpus-10k/label-pilot/blind-review-requests.jsonl');p.add_argument('--root',default='artifacts/blind-review');p.add_argument('--overlays');args=p.parse_args()
 source=Path('artifacts/corpus-10k');train={r['record_id']:r for r in (json.loads(l) for l in (source/'train.jsonl').read_text().splitlines())}
-requests=[json.loads(line) for line in (source/'label-pilot/blind-review-requests.jsonl').read_text().splitlines()]
+requests=[json.loads(line) for line in Path(args.requests).read_text().splitlines()]
+if args.overlays:
+ for overlay in (json.loads(line) for line in Path(args.overlays).read_text().splitlines()):
+  original=train[overlay['record_id']]
+  if overlay['source_signature']!=original['signature'] or overlay['split']!='train' or overlay.get('evaluation_only'):raise ValueError('Invalid replay overlay')
+  train[overlay['record_id']]={**original,'annotation_view':overlay['annotation_view'],'annotation_policy':overlay['annotation_policy']}
 rows=[blind_payload(r,train[r['record_id']]) for r in requests]
 # Known control answers stay local; the GPU payload contains only their features.
 controls=[
@@ -27,11 +32,11 @@ for name,form,purpose,fields in controls:
     record_id='control-'+name;rows.append({'record_id':record_id,'language':'ja' if name.endswith('-ja') else 'en','form':form,'kind':'control'});answers.append({'record_id':record_id,'form_label':purpose,'field_labels':fields})
 import random
 random.Random(20261109).shuffle(rows)
-root=Path('artifacts/blind-review');root.mkdir(parents=True,exist_ok=True);(root/'controls-local.json').write_text(json.dumps(answers,ensure_ascii=False,indent=2))
+root=Path(args.root);root.mkdir(parents=True,exist_ok=True);(root/'controls-local.json').write_text(json.dumps(answers,ensure_ascii=False,indent=2))
 (root/'blind-local.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False)+'\n' for r in rows))
 buf=io.BytesIO()
 with zipfile.ZipFile(buf,'w',zipfile.ZIP_DEFLATED) as z:
-    for path in ['passbert/__init__.py','passbert/data.py','passbert/annotation.py','passbert/review.py','scripts/review_worker.py']:z.write(path,path)
+    for path in ['passbert/__init__.py','passbert/data.py','passbert/annotation.py','passbert/review.py','passbert/context_v3.py','scripts/review_worker.py']:z.write(path,path)
     z.write(args.teacher_config,'qwen-config.json')
     z.writestr('blind.jsonl',''.join(json.dumps(r,ensure_ascii=False)+'\n' for r in rows))
 payload=base64.b64encode(buf.getvalue()).decode()

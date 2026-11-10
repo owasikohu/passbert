@@ -27,7 +27,12 @@ Rules:
 - Classify what is described. Do not invent missing page context or assume every form is authentication.
 No explanations, code fences, confidence scores, record IDs, or extra keys.'''
 
-def valid_view(form):
+def valid_view(form,policy='semantic-annotation-v2'):
+    if policy=='semantic-context-v3':
+        from passbert.context_v3 import ALLOWED
+        terms=ALLOWED;limit=512
+    elif policy=='semantic-annotation-v2':terms=TERMS;limit=256
+    else:return False
     if not isinstance(form,dict) or set(form)!={'context','fields'}:return False
     if not isinstance(form['fields'],list) or not 1<=len(form['fields'])<=64:return False
     values=[form['context']]
@@ -37,21 +42,23 @@ def valid_view(form):
         if not isinstance(field['autocomplete'],str) or any(t not in AUTOCOMPLETE for t in field['autocomplete'].split()):return False
         values.append(field['hint'])
     for value in values:
-        if not isinstance(value,str) or len(value)>256:return False
+        if not isinstance(value,str) or len(value)>limit:return False
         tokens=[t.replace('ı','i').replace('i\u0307','i').replace('ſ','s') for t in value.split()]
         for i,token in enumerate(tokens):
-            if token not in TERMS and not (i==len(tokens)-1 and len(value)==256 and any(t.startswith(token) for t in TERMS)):return False
+            if token not in terms and not (i==len(tokens)-1 and len(value)==limit and any(t.startswith(token) for t in terms)):return False
     return True
 
 def blind_payload(request,train_record):
     if train_record.get('split')!='train' or train_record.get('evaluation_only'):raise ValueError('Reserved/evaluation records cannot be reviewed by the training teacher')
     if request.get('teacher_predictions_visible') is not False:raise ValueError('Review must be blind')
     if request['record_id']!=train_record['record_id'] or not re.fullmatch('[a-f0-9]{64}',request['record_id']):raise ValueError('Record identity mismatch')
-    if request['form']!=train_record.get('annotation_view',train_record['form']) or not valid_view(request['form']):raise ValueError('Unsafe or mismatched descriptors')
-    return {'record_id':request['record_id'],'language':request['language'],'form':request['form'],'kind':'corpus'}
+    policy=request.get('annotation_policy','semantic-annotation-v2')
+    if policy!=train_record.get('annotation_policy','semantic-annotation-v2'):raise ValueError('Annotation policy mismatch')
+    if request['form']!=train_record.get('annotation_view',train_record['form']) or not valid_view(request['form'],policy):raise ValueError('Unsafe or mismatched descriptors')
+    return {'record_id':request['record_id'],'language':request['language'],'form':request['form'],'kind':'corpus','annotation_policy':policy}
 
 def messages(request):
-    if not valid_view(request['form']):raise ValueError('Unsafe view')
+    if not valid_view(request['form'],request.get('annotation_policy','semantic-annotation-v2')):raise ValueError('Unsafe view')
     payload={'field_count':len(request['form']['fields']),'form':request['form']}
     return [{'role':'system','content':SYSTEM},{'role':'user','content':json.dumps(payload,ensure_ascii=False)}]
 

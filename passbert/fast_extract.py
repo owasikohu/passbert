@@ -5,7 +5,7 @@ from passbert.data import FIELDS,safe
 from passbert.annotation import sanitize as annotation_safe,AUTOCOMPLETE
 
 
-def extract_fast(html):
+def extract_fast(html, *, annotation_builder=None):
  tree=LexborHTMLParser(html[:1_000_000])
  for node in tree.css('script,style,template,noscript'):node.decompose()
  def attrs(node):return node.attributes or {}
@@ -91,6 +91,12 @@ def extract_fast(html):
             if headings or cursor.parent is None or cursor.parent.tag in ['body','html','-document']:break
             cursor=cursor.parent
     context=' '.join(text(n) for n in headings+root.css('button'))
-    output.append({'context':safe(context),'fields':fields});views.append({'context':annotation_safe(context),'fields':annotation_fields})
+    output.append({'context':safe(context),'fields':fields})
+    if annotation_builder is None:views.append({'context':annotation_safe(context),'fields':annotation_fields})
+    else:
+        def visible_text(node):
+            if node is None:return ''
+            return ' '.join(t.text_content for t in node.traverse(include_text=True) if t.is_text_node and not blocked_text(t.parent) and visible(t.parent))
+        views.append(annotation_builder(root,elements,headings,{'text':visible_text,'visible':visible,'by_id':by_id,'labels':labels}))
     if len(output)>=32:break
  return output,views
