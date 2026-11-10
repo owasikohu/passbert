@@ -1,5 +1,7 @@
 # 新しい教師による盲検レビュー
 
+[完了した80件のレビュー結果](BLIND_REVIEW_RESULTS.md)。
+
 主教師は **Qwen3.8-27B / Unsloth UD-Q6_K**、推論はKaggle T4 ×2上のllama.cppです。軽量なPhi-4-miniを最初に選びましたが、性能を優先する方針に変更し、その待機中ジョブは撤回しました。Windows側の環境は変更していません。
 
 モデルの主張・仕様は[公式Qwenモデルカード](https://huggingface.co/Qwen/Qwen3.8-27B)、量子化ファイルは[Unslothの配布元](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF)、サーバー仕様は[llama.cpp](https://github.com/ggml-org/llama.cpp/tree/b12208/tools/server)を参照。モデルカードの一般ベンチマークを、このフォーム分類の性能として扱いません。
@@ -37,7 +39,7 @@ GPUジョブへ渡すのは、allowlistで検証したフォーム特徴・recor
 .venv/bin/python -m scripts.summarize_review
 ```
 
-投入後の自動回収には `.venv/bin/python -m scripts.finish_blind_review` を使います。1ジョブだけを最大6時間監視し、新しいGPUジョブは起動しません。現在状態は `artifacts/blind-review/watch-status.json` に保存し、エラー・時間切れを完了扱いにしません。
+投入後の自動回収には `.venv/bin/python -m scripts.finish_blind_review` を使います。1ジョブだけを最大6時間監視し、新しいGPUジョブは起動しません。status取得は45秒、回収は300秒でtimeoutを設定します。ローカルWSLの停止・スリープ中は監視できません。現在状態とUTC更新時刻は `artifacts/blind-review/watch-status.json` に保存し、エラー・時間切れを完了扱いにしません。
 
 元の80件のJSONLと訓練コーパスが必要です。出力は `artifacts/blind-review/output/review-output/`。比較結果は `assessment.json`。確認例の正否、形式違反、保留、モデル間の一致・不一致を分け、元の振り分け別・言語別にも集計します。
 

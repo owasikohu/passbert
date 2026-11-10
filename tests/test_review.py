@@ -34,3 +34,13 @@ class ReviewSummaryTests(unittest.TestCase):
         r=summarize(requests,proposals,reviews,controls)
         self.assertEqual(r['counts']['abstained_or_partial'],1);self.assertEqual(r['controls']['exact'],1);self.assertEqual(r['gold_labels'],0);self.assertEqual(r['training_promotions'],0)
         with self.assertRaises(ValueError):summarize(requests,proposals,reviews+reviews,controls)
+
+class KaggleWatchTests(unittest.TestCase):
+    def test_status_calls_have_deadlines_and_do_not_hide_timeouts(self):
+        import subprocess
+        from unittest.mock import patch
+        from passbert.kaggle_watch import kernel_status
+        with patch('passbert.kaggle_watch.subprocess.run',return_value=subprocess.CompletedProcess([],0,"x has status \"KernelWorkerStatus.COMPLETE\"",'')) as run:
+            self.assertEqual(kernel_status('kaggle','owner/job'),'complete');self.assertEqual(run.call_args.kwargs['timeout'],45)
+        with patch('passbert.kaggle_watch.subprocess.run',side_effect=subprocess.TimeoutExpired('kaggle',45)):
+            with self.assertRaises(subprocess.TimeoutExpired):kernel_status('kaggle','owner/job')
